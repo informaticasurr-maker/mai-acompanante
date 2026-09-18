@@ -1,0 +1,22 @@
+{
+  "name": "MAI - Maestra de Apoyo a la Inclusión",
+  "short_name": "MAI App",
+  "description": "Asistente inteligente y gestión documental para Maestros Integradores",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
