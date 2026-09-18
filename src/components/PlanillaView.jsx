@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLegajos } from '../context/LegajosContext';
 
 export default function PlanillaView() {
+  const { activeLegajo } = useLegajos();
   const date = new Date();
+  
   const [data, setData] = useState({
     mes: String(date.getMonth() + 1).padStart(2, '0'),
     anio: String(date.getFullYear()),
-    profNombre: '',
+    profNombre: localStorage.getItem('mai_profNombre') || '',
     pacNombre: '',
     institucion: '',
     horaEntrada: '08:00',
     horaSalida: '12:00',
   });
+
+  useEffect(() => {
+    if (activeLegajo) {
+      setData(prev => ({
+        ...prev,
+        pacNombre: activeLegajo.pacNombre || prev.pacNombre,
+        institucion: activeLegajo.institucion || prev.institucion,
+      }));
+    }
+  }, [activeLegajo]);
 
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });

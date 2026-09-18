@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { useLegajos } from '../context/LegajosContext';
+import { useAuth } from '../context/AuthContext';
+import { storage } from '../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function LegajosView() {
   const { legajos, addLegajo, updateLegajo, deleteLegajo } = useLegajos();
+  const { currentUser } = useAuth();
   
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [currentLegajo, setCurrentLegajo] = useState(null);
+  const [fileToUpload, setFileToUpload] = useState(null);
 
   const emptyForm = {
     pacNombre: '',
@@ -14,7 +20,8 @@ export default function LegajosView() {
     pacAfiliado: '',
     institucion: '',
     diagnostico: '',
-    perfil: ''
+    perfil: '',
+    bitacoraUrl: ''
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -22,21 +29,39 @@ export default function LegajosView() {
   const handleEdit = (legajo) => {
     setCurrentLegajo(legajo.id);
     setFormData(legajo);
+    setFileToUpload(null);
     setIsEditing(true);
   };
 
   const handleNew = () => {
     setCurrentLegajo(null);
     setFormData(emptyForm);
+    setFileToUpload(null);
     setIsEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    let finalData = { ...formData };
+
+    if (fileToUpload && currentUser) {
+      setIsUploading(true);
+      try {
+        const fileRef = ref(storage, `bitacoras/${currentUser.uid}/${Date.now()}_${fileToUpload.name}`);
+        await uploadBytes(fileRef, fileToUpload);
+        const url = await getDownloadURL(fileRef);
+        finalData.bitacoraUrl = url;
+      } catch (error) {
+        console.error("Error subiendo archivo:", error);
+        alert("No se pudo subir la bitácora.");
+      }
+      setIsUploading(false);
+    }
+
     if (currentLegajo) {
-      updateLegajo(currentLegajo, formData);
+      updateLegajo(currentLegajo, finalData);
     } else {
-      addLegajo(formData);
+      addLegajo(finalData);
     }
     setIsEditing(false);
   };
@@ -123,12 +148,46 @@ export default function LegajosView() {
                 className={`${inputClass} h-32 resize-none`} 
                 placeholder="Ej: Se beneficia de textos cortos, viñetas, esquemas visuales. Requiere instrucciones dadas paso a paso..."
               ></textarea>
+
+              <div className="mt-6 border-t pt-4">
+                <h4 className="font-bold text-slate-700 mb-2">Bitácora del Alumno</h4>
+                <p className="text-xs text-slate-500 mb-3">Sube informes, entrevistas familiares o PDF con la trayectoria escolar.</p>
+                
+                {formData.bitacoraUrl && (
+                  <div className="mb-3 p-3 bg-blue-50 rounded-md border border-blue-200 flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-800">Ya existe una bitácora guardada</span>
+                    <a href={formData.bitacoraUrl} target="_blank" rel="noopener noreferrer" className="text-sm bg-white border border-blue-200 px-3 py-1 rounded text-blue-600 hover:bg-blue-100 font-semibold transition-colors">
+                      Ver/Descargar
+                    </a>
+                  </div>
+                )}
+
+                <label className={labelClass}>{formData.bitacoraUrl ? 'Reemplazar bitácora actual' : 'Subir nuevo archivo'}</label>
+                <input 
+                  type="file" 
+                  accept=".pdf, .jpg, .jpeg, .png" 
+                  onChange={(e) => setFileToUpload(e.target.files[0])}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
             </div>
           </div>
 
           <div className="mt-8 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancelar</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Guardar Legajo</button>
+            <button type="button" onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg" disabled={isUploading}>Cancelar</button>
+            <button type="submit" disabled={isUploading} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 flex items-center gap-2">
+              {isUploading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Guardando y Subiendo...
+                </>
+              ) : (
+                "Guardar Legajo"
+              )}
+            </button>
           </div>
         </form>
       ) : (
@@ -163,6 +222,20 @@ export default function LegajosView() {
                   <p className="pt-2 border-t mt-2 text-xs italic text-slate-500 line-clamp-3">
                     "{legajo.perfil}"
                   </p>
+                  
+                  {legajo.bitacoraUrl && (
+                    <div className="mt-3 pt-3 border-t flex justify-end">
+                      <a 
+                        href={legajo.bitacoraUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        Ver Bitácora / Informe
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))

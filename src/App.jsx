@@ -7,9 +7,16 @@ import PlanillaView from './components/PlanillaView';
 import AltaPrestadorView from './components/AltaPrestadorView';
 import LegajosView from './components/LegajosView';
 import ConfigView from './components/ConfigView';
+import LoginView from './components/LoginView';
+import { useAuth } from './context/AuthContext';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard');
+  const { currentUser } = useAuth();
+
+  if (!currentUser) {
+    return <LoginView />;
+  }
 
   return (
     <Layout currentView={currentView} setCurrentView={setCurrentView}>

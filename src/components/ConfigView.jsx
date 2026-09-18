@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../services/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function ConfigView() {
+  const { currentUser } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [profName, setProfName] = useState('');
   const [profTitle, setProfTitle] = useState('');
@@ -15,23 +19,43 @@ export default function ConfigView() {
     if (storedTitle) setProfTitle(storedTitle);
   }, []);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    // Guardar en localStorage para disponibilidad inmediata
     localStorage.setItem('mai_gemini_api_key', apiKey);
     localStorage.setItem('mai_prof_name', profName);
     localStorage.setItem('mai_prof_title', profTitle);
+    
+    // Sincronizar con la nube
+    if (currentUser) {
+      try {
+        await setDoc(doc(db, 'usuarios', currentUser.uid, 'perfil'), {
+          profNombre: profName,
+          profTitulo: profTitle,
+          apiKey: apiKey
+        }, { merge: true });
+      } catch (error) {
+        console.error("Error guardando configuración en Firebase:", error);
+      }
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const handleClear = () => {
-    if(window.confirm('¿Estás segura de eliminar todos los datos de configuración?')) {
+  const handleClear = async () => {
+    if(window.confirm('¿Estás segura de eliminar tu Clave Privada? La app usará la clave por defecto.')) {
       localStorage.removeItem('mai_gemini_api_key');
-      localStorage.removeItem('mai_prof_name');
-      localStorage.removeItem('mai_prof_title');
       setApiKey('');
-      setProfName('');
-      setProfTitle('');
+      
+      // Actualizar nube
+      if (currentUser) {
+        try {
+          await setDoc(doc(db, 'usuarios', currentUser.uid, 'perfil'), {
+            apiKey: ''
+          }, { merge: true });
+        } catch(e) {}
+      }
     }
   };
 
@@ -87,12 +111,23 @@ export default function ConfigView() {
 
             {/* API Key */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                Google Gemini API Key
+              <h3 className="text-lg font-semibold text-slate-800 mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                  Google Gemini API Key
+                </span>
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline flex items-center gap-1"
+                >
+                  Generar mi propia clave
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
               </h3>
               <p className="text-sm text-slate-600 mb-4">
-                Para que el Agente MAI pueda analizar documentos e imágenes mediante Inteligencia Artificial, necesita conectarse a Google Gemini. Ingresa tu clave privada aquí. Se guardará localmente en tu navegador. Si usás el archivo `.env.local` global, podés dejar esto vacío.
+                Si dejas este campo vacío, la aplicación utilizará automáticamente la clave predeterminada del desarrollador (la cual podría no funcionar o tener límites) para procesar las adecuaciones. Si tenés tu propia clave gratuita generada en Google AI Studio, pegala aquí.
               </p>
               
               <div className="relative">

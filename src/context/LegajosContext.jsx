@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { db } from '../services/firebase';
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { useAuth } from './AuthContext';
 
 const LegajosContext = createContext();
 
@@ -7,30 +10,12 @@ export function useLegajos() {
 }
 
 export function LegajosProvider({ children }) {
-  const [legajos, setLegajos] = useState(() => {
-    const saved = localStorage.getItem('mai_legajos');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: '1',
-        pacNombre: 'Mateo González',
-        pacDni: '55.123.456',
-        pacObraSocial: 'OSDE',
-        pacAfiliado: '123456789-01',
-        institucion: 'Colegio San José',
-        diagnostico: 'Dislexia',
-        perfil: 'Dificultad en lectura fluida. Se beneficia de textos con fuente grande, interlineado amplio y viñetas cortas.'
-      }
-    ]; // Dummy inicial
-  });
-
+  const { currentUser } = useAuth();
+  const [legajos, setLegajos] = useState([]);
+  
   const [activeLegajoId, setActiveLegajoId] = useState(() => {
     return localStorage.getItem('mai_active_legajo') || null;
   });
-
-  useEffect(() => {
-    localStorage.setItem('mai_legajos', JSON.stringify(legajos));
-  }, [legajos]);
 
   useEffect(() => {
     if (activeLegajoId) {
@@ -40,18 +25,45 @@ export function LegajosProvider({ children }) {
     }
   }, [activeLegajoId]);
 
-  const addLegajo = (legajo) => {
-    const newLegajo = { ...legajo, id: Date.now().toString() };
-    setLegajos([...legajos, newLegajo]);
-    if (!activeLegajoId) setActiveLegajoId(newLegajo.id);
+  useEffect(() => {
+    if (!currentUser) {
+      setLegajos([]);
+      return;
+    }
+
+    const legajosRef = collection(db, 'usuarios', currentUser.uid, 'legajos');
+    
+    // Escuchar cambios en tiempo real
+    const unsubscribe = onSnapshot(legajosRef, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setLegajos(data);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  const addLegajo = async (legajo) => {
+    if (!currentUser) return;
+    const newId = Date.now().toString();
+    const docRef = doc(db, 'usuarios', currentUser.uid, 'legajos', newId);
+    await setDoc(docRef, { ...legajo });
+    
+    if (!activeLegajoId) setActiveLegajoId(newId);
   };
 
-  const updateLegajo = (id, updatedData) => {
-    setLegajos(legajos.map(l => l.id === id ? { ...l, ...updatedData } : l));
+  const updateLegajo = async (id, updatedData) => {
+    if (!currentUser) return;
+    const docRef = doc(db, 'usuarios', currentUser.uid, 'legajos', id);
+    await setDoc(docRef, updatedData, { merge: true });
   };
 
-  const deleteLegajo = (id) => {
-    setLegajos(legajos.filter(l => l.id !== id));
+  const deleteLegajo = async (id) => {
+    if (!currentUser) return;
+    const docRef = doc(db, 'usuarios', currentUser.uid, 'legajos', id);
+    await deleteDoc(docRef);
     if (activeLegajoId === id) setActiveLegajoId(null);
   };
 

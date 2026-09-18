@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLegajos } from '../context/LegajosContext';
 
 export default function PresupuestoView() {
+  const { activeLegajo } = useLegajos();
+
   const [data, setData] = useState({
-    profNombre: '',
-    profEspecialidad: 'Maestro/a de Apoyo a la Inclusión',
+    profNombre: localStorage.getItem('mai_profNombre') || '',
+    profEspecialidad: localStorage.getItem('mai_profTitulo') || 'Maestro/a de Apoyo a la Inclusión',
     profCuit: '',
     profMatricula: '',
     profDireccion: '',
@@ -22,6 +25,18 @@ export default function PresupuestoView() {
     bancoTipo: 'Caja de Ahorro',
     fecha: new Date().toLocaleDateString('es-AR')
   });
+
+  useEffect(() => {
+    if (activeLegajo) {
+      setData(prev => ({
+        ...prev,
+        pacNombre: activeLegajo.pacNombre || prev.pacNombre,
+        pacDni: activeLegajo.pacDni || prev.pacDni,
+        pacObraSocial: activeLegajo.pacObraSocial || prev.pacObraSocial,
+        pacAfiliado: activeLegajo.pacAfiliado || prev.pacAfiliado,
+      }));
+    }
+  }, [activeLegajo]);
 
   const handleChange = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });

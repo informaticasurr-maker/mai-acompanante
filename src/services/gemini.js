@@ -23,9 +23,9 @@ function fileToBase64(file) {
  * @returns {Promise<string>} La respuesta en formato Markdown adaptado.
  */
 export async function generarAdecuacion(file, legajo, sugerenciasMaestro = '') {
-  // Primero intentamos leer la variable de entorno global (.env.local)
-  // Si no está, intentamos leer la configuración local del usuario (para testing)
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('mai_gemini_api_key');
+  // Primero intentamos leer la configuración local del usuario (para personalización)
+  // Si no está, intentamos leer la variable de entorno global (.env.local)
+  const apiKey = localStorage.getItem('mai_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY;
   
   if (!apiKey || apiKey === 'ACA_VA_TU_CLAVE_DE_GEMINI') {
     throw new Error('API_KEY_MISSING');

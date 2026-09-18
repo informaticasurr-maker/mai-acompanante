@@ -1,8 +1,10 @@
 import React from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useLegajos } from '../context/LegajosContext';
 
 export default function Layout({ children, currentView, setCurrentView }) {
   const { legajos, activeLegajoId, setActiveLegajoId } = useLegajos();
+  const { logout } = useAuth();
 
   const navItemClass = (viewName) => `
     cursor-pointer px-4 py-2 font-medium transition-colors
@@ -44,6 +46,12 @@ export default function Layout({ children, currentView, setCurrentView }) {
                 </select>
               </div>
               <button 
+                onClick={logout}
+                className="text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors hidden sm:block"
+              >
+                Cerrar sesión
+              </button>
+              <button 
                 onClick={() => setCurrentView('config')}
                 className={`p-2 rounded-md transition-colors ${currentView === 'config' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100'}`}
                 title="Configuración del Sistema"
@@ -71,6 +79,31 @@ export default function Layout({ children, currentView, setCurrentView }) {
       <footer className="bg-white border-t border-slate-200 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-slate-500">
           Agente MAI &copy; {new Date().getFullYear()} - Herramienta de Apoyo a la Inclusión
+        </div>
+
+        {/* Footer CodeGhodes */}
+        <div className="py-6 border-t border-slate-100 text-center">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <img 
+              src="/codeghodes.jpg" 
+              alt="CodeGhodes Logo" 
+              className="h-10 object-contain rounded drop-shadow-sm"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+            <p className="text-sm text-slate-500 font-medium">
+              &copy; {new Date().getFullYear()} Todos los derechos reservados
+            </p>
+            <div className="flex items-center gap-4 text-sm text-slate-500">
+              <a href="https://www.codeghodes.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-600 transition-colors font-medium">
+                www.codeghodes.com
+              </a>
+              <span className="text-slate-300">|</span>
+              <a href="mailto:codeghodes@gmail.com" className="hover:text-indigo-600 transition-colors font-medium">
+                codeghodes@gmail.com
+              </a>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">Desarrollo de Software a Medida</p>
+          </div>
         </div>
       </footer>
     </div>

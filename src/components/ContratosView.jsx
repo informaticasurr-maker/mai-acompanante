@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLegajos } from '../context/LegajosContext';
 
 export default function ContratosView() {
+  const { activeLegajo } = useLegajos();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    maiNombre: '',
+    maiNombre: localStorage.getItem('mai_profNombre') || '',
     maiDni: '',
     maiDomicilio: '',
     maiLocalidad: '',
-    maiProfesion: '',
+    maiProfesion: localStorage.getItem('mai_profTitulo') || '',
     maiMatricula: '',
     tutorNombre: '',
     tutorDni: '',
@@ -26,6 +28,18 @@ export default function ContratosView() {
     anoLectivo: new Date().getFullYear().toString(),
     ciudadFirma: '',
   });
+
+  useEffect(() => {
+    if (activeLegajo) {
+      setFormData(prev => ({
+        ...prev,
+        alumnoNombre: activeLegajo.pacNombre || prev.alumnoNombre,
+        alumnoDni: activeLegajo.pacDni || prev.alumnoDni,
+        escuelaNombre: activeLegajo.institucion || prev.escuelaNombre,
+        obraSocial: activeLegajo.pacObraSocial || prev.obraSocial,
+      }));
+    }
+  }, [activeLegajo]);
 
   const [contratoGenerado, setContratoGenerado] = useState('');
 
